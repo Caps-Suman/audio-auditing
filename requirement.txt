@@ -1,0 +1,45 @@
+# === Core Framework ===
+fastapi
+uvicorn
+
+# === OpenAI SDK ===
+openai==1.77.0
+
+# === Environment Variables ===
+python-dotenv
+
+# === Multipart File Handling ===
+python-multipart
+
+# === Pydantic for Data Validation ===
+pydantic
+
+# === HTTP Requests ===
+requests
+
+llama-cpp-python
+
+yt-dlp
+# yt-dlp -x --audio-format mp3 https://youtu.be/hpZFJctBUHQ
+
+# === Whisper for Local Transcription ===
+git+https://github.com/openai/whisper.git
+
+# === Required for Whisper ===
+numpy==1.26.4
+
+# 🔧 External System Dependency Required by Whisper
+# FFmpeg is required but NOT included in Python packages.
+# Please install it manually based on your system:
+
+# ➤ MacOS (Homebrew):
+#     brew install ffmpeg
+#
+# ➤ Windows:
+#     Download binaries from: https://evermeet.cx/ffmpeg/
+#
+# ➤ Anaconda:
+#     conda install -c conda-forge ffmpeg
+#
+# ➤ Ubuntu/Linux:
+#     sudo apt install ffmpeg

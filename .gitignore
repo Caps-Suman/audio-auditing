@@ -1,0 +1,48 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Environment files
+.env
+.venv/
+env/
+venv/
+ENV/
+*.env
+
+# IDE settings
+.idea/
+.vscode/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Model files (Local LLMs, Whisper, etc.)
+*.gguf
+*.pt
+*.bin
+/models/
+
+# Audio/Media temp files
+*.wav
+*.mp3
+*.ogg
+*.m4a
+*.webm
+*.sln
+*.tmp
+
+# Log and debug files
+*.log
+*.bak
+
+# FastAPI auto-generated or runtime files
+*.sqlite3
+instance/
+uploads/
+temp/
+tmp/
