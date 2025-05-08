@@ -18,6 +18,10 @@ pydantic
 requests
 
 llama-cpp-python
+# huggingface-hub
+# In Ec2
+# wget https://huggingface.co/TheBloke/Nous-Hermes-13B-GGUF/resolve/main/Nous-Hermes-13B.Q4_K_M.gguf -P models/
+
 
 yt-dlp
 # yt-dlp -x --audio-format mp3 https://youtu.be/hpZFJctBUHQ

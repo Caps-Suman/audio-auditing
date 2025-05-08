@@ -12,9 +12,8 @@ WHISPER_FORMAT = {
 }
 
 def transcode_to_whisper_wav(input_path: str) -> str:
-    """
-    Converts an audio file to Whisper-compatible .wav if needed.
-    Returns same path if already compatible.
+    """ 
+    Converts an audio file to Whisper-compatible .wav if needed. Returns same path if already compatible. 
     """
     if input_path.lower().endswith(".wav") and is_whisper_compatible_wav(input_path):
         return input_path  #  Skip transcoding
@@ -62,8 +61,7 @@ def is_whisper_compatible_wav(input_path: str) -> bool:
 
 def detect_codec_with_ffprobe(input_path: str) -> Tuple[str, str]:
     """
-    Uses ffprobe to detect codec and format.
-    Returns (format, codec) tuple.
+    Uses ffprobe to detect codec and format. Returns (format, codec) tuple.
     """
     try:
         result = subprocess.run(

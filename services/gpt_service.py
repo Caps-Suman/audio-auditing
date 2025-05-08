@@ -1,3 +1,4 @@
+from typing import List
 import openai
 import os, json
 from openai import OpenAI
@@ -30,9 +31,60 @@ Expected output format:
 Transcript:
 """
 
+def build_gpt_prompt(transcript: str, rule_list: list[str]) -> str:
+    formatted_rules = "\n".join([f"{i+1}. {rule}" for i, rule in enumerate(rule_list)])
+
+    prompt = f"""
+                You are a quality audit evaluation engine.
+
+                Your task is to analyze a call transcript and determine whether each of the provided rules is satisfied based on what was said in the call.
+
+                Instructions:
+                - For each rule, return:
+                - "rule": the rule text
+                - "result": "Yes" if the rule was followed, "No" if not, "Unknown" if not verifiable
+                - "reason": briefly justify the answer (1-2 sentences max)
+                - Use ONLY the information found in the transcript.
+                - Do NOT assume or hallucinate anything.
+                - Return only a valid JSON array (no markdown, no commentary).
+
+                Rules:
+                {formatted_rules}
+
+                Transcript:
+                \"\"\"{transcript}\"\"\"
+
+                Return format (strict JSON):
+                [
+                {{
+                    "rule": "...",
+                    "result": "Yes" | "No" | "Unknown",
+                    "reason": "..."
+                }},
+                ...
+                ]
+                """
+    return prompt.strip()
+
 # <-------------- OpenAI setup start ----------->
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+def evaluate_rules_with_gpt(transcript: str, rules: List[str]) -> List[dict]:
+    prompt = build_gpt_prompt(transcript, rules)
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4",  # or "gpt-3.5-turbo"
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+            max_tokens=800
+        )
+        result_text = response['choices'][0]['message']['content']
+        return json.loads(result_text)
+    except Exception as e:
+        return [{"rule": rule, "result": "Error", "reason": str(e)} for rule in rules]
+    
 
 def extract_audit_fields_from_text_using_openai(transcript: str) -> dict:
     prompt = EXTRACTION_PROMPT_TEMPLATE + transcript + "\n\nReturn only valid JSON."
@@ -53,7 +105,8 @@ def extract_audit_fields_from_text_using_openai(transcript: str) -> dict:
 # <-------------- OpenAI setup end ----------->
 
 # <------------- Local LLM setup start ----------->
-LLM_PATH = "./models/Nous-Hermes-2-Mistral-7B-DPO.Q4_K_M.gguf"
+# LLM_PATH = "./models/Nous-Hermes-2-Mistral-7B-DPO.Q4_K_M.gguf"
+LLM_PATH = "./models/Nous-Hermes-13B.Q4_K_M.gguf"
 
 llm = Llama(
     model_path=LLM_PATH,
