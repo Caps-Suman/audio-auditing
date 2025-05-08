@@ -74,9 +74,7 @@ client = OpenAI(
     # organization=os.getenv("ORGANIZATION_ID"),
     # project=os.getenv("PROJECT_ID")
 
-    api_key="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",
-    organization="org-Xl0FwsRYQBZYwJNwm820gOlA",
-    project="proj_cFBBKgTs77izV9JiATa7W5o0"
+    
 )
 
 def evaluate_rules_with_gpt(sampleId: int,transcript: str, rules: List[str]) -> List[dict]:
