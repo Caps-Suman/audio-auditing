@@ -2,12 +2,13 @@ import os, tempfile, shutil
 from typing import List
 from pydantic import BaseModel
 import requests
-from fastapi import APIRouter, File, UploadFile, HTTPException
+from fastapi import APIRouter, File, UploadFile, HTTPException, logger
 from fastapi.responses import JSONResponse
 
 from services.transcript_utils import format_transcript_with_speakers
 from services.whisper_service import transcribe_audio
-from services.gpt_service import evaluate_rules_with_gpt, extract_audit_fields_from_text_using_local_llm, extract_audit_fields_from_text_using_openai
+from services.gpt_service import evaluate_rules_with_gpt
+# from services.gpt_service import evaluate_rules_with_local_llm, extract_audit_fields_from_text_using_local_llm, extract_audit_fields_from_text_using_openai
 from services.audio_format_handler import transcode_to_whisper_wav
 
 router = APIRouter()
@@ -34,13 +35,13 @@ async def extract_from_audio(file: UploadFile = File(...)):
         transcript = transcribe_audio(transcoded_path)
 
         # Extract audit fields from transcript
-        audit_data = extract_audit_fields_from_text_using_local_llm(transcript)
+        # audit_data = extract_audit_fields_from_text_using_local_llm(transcript)
         # audit_data = extract_audit_fields_from_text_using_openai(transcript)
         formatted_transcript = format_transcript_with_speakers(transcript)
         
         return JSONResponse(content={
             "transcript": formatted_transcript,
-            "audit_fields": audit_data
+            # "audit_fields": audit_data
         })
 
     finally:
@@ -87,7 +88,8 @@ async def audit_call(request: AuditRequest):
         # Step 4: GPT-based parameter evaluations
         evaluations = []
         for param in request.parameter:
-            result = evaluate_rules_with_gpt(transcript, param.ruleList)
+            result = evaluate_rules_with_gpt(request.sampleId,transcript, param.ruleList)
+            # result = evaluate_rules_with_local_llm(transcript, param.ruleList)
             evaluations.append({
                 "id": param.id,
                 "name": param.name,
@@ -102,7 +104,10 @@ async def audit_call(request: AuditRequest):
         } 
      
     finally:
-        if audio_path and os.path.exists(audio_path):
-            os.remove(audio_path)
-        if transcoded_path and os.path.exists(transcoded_path):
-            os.remove(transcoded_path)
+        for path in [audio_path, transcoded_path]:
+            try:
+                if path and os.path.exists(path):
+                    os.remove(path)
+            except Exception as e:
+                logger.warning(f"Failed to remove temp file {path}: {e}")
+
