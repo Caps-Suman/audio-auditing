@@ -66,48 +66,77 @@ class AuditRequest(BaseModel):
 async def audit_call(request: AuditRequest):
     audio_path = None
     transcoded_path = None
+    webhook_url = os.getenv("WEBHOOK_URL")
+
+    if not webhook_url:
+        raise HTTPException(status_code=500, detail="Webhook URL not configured.")
 
     try:
-        # Download the audio
+        # Step 1: Download the audio
         response = requests.get(request.audioUrl, stream=True)
         if response.status_code != 200:
             raise HTTPException(status_code=400, detail="Failed to download audio")
 
-        # Save audio to temp file
+        # Step 2: Save audio to temp file
         ext = os.path.splitext(request.audioUrl)[-1]
         with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
             shutil.copyfileobj(response.raw, tmp)
             audio_path = tmp.name
 
-        # Transcode to Whisper-compatible format if needed
+        # Step 3: Transcode if needed
         transcoded_path = transcode_to_whisper_wav(audio_path)
 
-        # Transcribe the clean .wav audio
+        # Step 4: Transcribe
         transcript = transcribe_audio(transcoded_path)
 
-        # Step 4: GPT-based parameter evaluations
+        # Step 5: Evaluate parameters
         evaluations = []
         for param in request.parameter:
-            result = evaluate_rules_with_gpt_using_requests(request.sampleId,transcript, param.ruleList)
-            # result = evaluate_rules_with_local_llm(transcript, param.ruleList)
+            result = evaluate_rules_with_gpt_using_requests(request.sampleId, transcript, param.ruleList)
             evaluations.append({
                 "id": param.id,
                 "name": param.name,
-                "rules": result  # detailed GPT evaluation
+                "rules": result
             })
 
-        # Step 5: Return structured response
-        return {
+        # Step 6: Send success webhook
+        payload = {
             "sampleId": request.sampleId,
+            "status": "completed",
             "transcript": transcript,
             "evaluations": evaluations
-        } 
-     
+        }
+
+        try:
+            response = requests.post(webhook_url, json=payload)
+            print(f"[Webhook Success] Status: {response.status_code}, Response: {response.text}")
+        except Exception as e:
+            print(f"[Webhook Error on success] {str(e)}")
+
+        return {"message": "Audit completed and webhook sent"}
+
+    except Exception as e:
+        # Step 7: Send failure webhook
+        error_payload = {
+            "sampleId": request.sampleId,
+            "status": "error",
+            "error": str(e)
+        }
+
+        try:
+            response = requests.post(webhook_url, json=error_payload)
+            print(f"[Webhook Error Notified] Status: {response.status_code}, Response: {response.text}")
+        except Exception as inner:
+            print(f"[Webhook Send Failed] {str(inner)}")
+
+        raise HTTPException(status_code=500, detail=f"Audit failed: {str(e)}")
+
     finally:
         for path in [audio_path, transcoded_path]:
             try:
                 if path and os.path.exists(path):
                     os.remove(path)
             except Exception as e:
-                logger.warning(f"Failed to remove temp file {path}: {e}")
+                print(f"Failed to remove temp file {path}: {e}")
+
 
