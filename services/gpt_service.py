@@ -74,7 +74,7 @@ client = OpenAI(
     # organization=os.getenv("ORGANIZATION_ID"),
     # project=os.getenv("PROJECT_ID")
 
-    api_key="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",
+    api_key="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",
     organization="org-Xl0FwsRYQBZYwJNwm820gOlA",
     project="proj_cFBBKgTs77izV9JiATa7W5o0"
 )
