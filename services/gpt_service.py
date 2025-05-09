@@ -9,6 +9,8 @@ import json
 import json
 import os
 
+import requests
+
 EXTRACTION_PROMPT_TEMPLATE = """
 You are a JSON-only extraction engine. Your task is to extract and return strictly the following fields in minified JSON format from the given call transcript.
 
@@ -70,13 +72,8 @@ def build_gpt_prompt(transcript: str, rule_list: list[str]) -> str:
 # <-------------- OpenAI setup start ----------->
 load_dotenv()
 client = OpenAI(
-    # api_key=os.getenv("OPENAI_API_KEY"),
-    # organization=os.getenv("ORGANIZATION_ID"),
-    # project=os.getenv("PROJECT_ID")
-
-    api_key="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",
-    organization="org-Xl0FwsRYQBZYwJNwm820gOlA",
-    project="proj_cFBBKgTs77izV9JiATa7W5o0"
+    api_key=os.getenv("OPENAI_API_KEY"),
+    project=os.getenv("OPENAI_PROJECT_ID")
 )
 
 def evaluate_rules_with_gpt(sampleId: int,transcript: str, rules: List[str]) -> List[dict]:
@@ -107,6 +104,41 @@ def evaluate_rules_with_gpt(sampleId: int,transcript: str, rules: List[str]) -> 
             "reason": str(e)
         } for rule in rules]
 
+
+api_key = os.getenv("api_key")
+project_id = os.getenv("OPENAI_PROJECT_ID")
+
+def evaluate_rules_with_gpt_using_requests(sampleId: int, transcript: str, rules: List[str]) -> List[dict]:
+    prompt = build_gpt_prompt(transcript, rules)
+
+    payload = {
+        "model": "gpt-3.5-turbo",
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "max_tokens": 1000,
+        "temperature": 0.1
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+
+    if project_id:
+        headers["OpenAI-Project"] = project_id
+
+    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+
+    if response.status_code != 200:
+        print("API Error:", response.status_code, response.text)
+        return [{"rule": rule, "result": "Error", "reason": response.text} for rule in rules]
+
+    try:
+        content = response.json()["choices"][0]["message"]["content"]
+        return json.loads(content)
+    except Exception as e:
+        return [{"rule": rule, "result": "Error", "reason": f"Parsing error: {str(e)}"} for rule in rules]
 
 
 def extract_audit_fields_from_text_using_openai(transcript: str) -> dict:

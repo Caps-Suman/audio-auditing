@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from services.transcript_utils import format_transcript_with_speakers
 from services.whisper_service import transcribe_audio
-from services.gpt_service import evaluate_rules_with_gpt
+from services.gpt_service import evaluate_rules_with_gpt, evaluate_rules_with_gpt_using_requests
 # from services.gpt_service import evaluate_rules_with_local_llm, extract_audit_fields_from_text_using_local_llm, extract_audit_fields_from_text_using_openai
 from services.audio_format_handler import transcode_to_whisper_wav
 
@@ -88,7 +88,7 @@ async def audit_call(request: AuditRequest):
         # Step 4: GPT-based parameter evaluations
         evaluations = []
         for param in request.parameter:
-            result = evaluate_rules_with_gpt(request.sampleId,transcript, param.ruleList)
+            result = evaluate_rules_with_gpt_using_requests(request.sampleId,transcript, param.ruleList)
             # result = evaluate_rules_with_local_llm(transcript, param.ruleList)
             evaluations.append({
                 "id": param.id,
