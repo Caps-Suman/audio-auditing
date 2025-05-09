@@ -17,7 +17,7 @@ pydantic
 # === HTTP Requests ===
 requests
 
-# llama-cpp-python
+llama-cpp-python
 
 yt-dlp
 # yt-dlp -x --audio-format mp3 https://youtu.be/hpZFJctBUHQ
