@@ -1,5 +1,5 @@
 import os, tempfile, shutil
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 import requests
 from fastapi import APIRouter, File, UploadFile, HTTPException, logger
@@ -53,7 +53,7 @@ async def extract_from_audio(file: UploadFile = File(...)):
 
 class ParameterRule(BaseModel):
     id: str
-    name: str
+    name: Optional[str] = None
     ruleList: List[str]
 
 class AuditRequest(BaseModel):
@@ -64,6 +64,7 @@ class AuditRequest(BaseModel):
 
 @router.post("/analyze-audio")
 async def audit_call(request: AuditRequest):
+    # print(f"Received request: {request}")
     audio_path = None
     transcoded_path = None
     webhook_url = os.getenv("WEBHOOK_URL")
@@ -110,6 +111,7 @@ async def audit_call(request: AuditRequest):
         try:
             response = requests.post(webhook_url, json=payload)
             print(f"[Webhook Success] Status: {response.status_code}, Response: {response.text}")
+            # print(f"[Webhook Success] Status: {response.status_code}, Response: {response.text}, payload: {payload}")
         except Exception as e:
             print(f"[Webhook Error on success] {str(e)}")
 
