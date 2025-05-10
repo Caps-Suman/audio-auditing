@@ -64,7 +64,7 @@ class AuditRequest(BaseModel):
 
 @router.post("/analyze-audio")
 async def audit_call(request: AuditRequest):
-    # print(f"Received request: {request}")
+    print(f"Received request: {request}")
     audio_path = None
     transcoded_path = None
     webhook_url = os.getenv("WEBHOOK_URL")
@@ -110,8 +110,8 @@ async def audit_call(request: AuditRequest):
 
         try:
             response = requests.post(webhook_url, json=payload)
-            print(f"[Webhook Success] Status: {response.status_code}, Response: {response.text}")
-            # print(f"[Webhook Success] Status: {response.status_code}, Response: {response.text}, payload: {payload}")
+            # print(f"[Webhook Success] Status: {response.status_code}, Response: {response.text}")
+            print(f"[Webhook Success] Status: {response.status_code}, Response: {response.text}, payload: {payload}")
         except Exception as e:
             print(f"[Webhook Error on success] {str(e)}")
 
