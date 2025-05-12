@@ -36,9 +36,9 @@ def format_transcript_with_speakers(segments: List[dict]) -> str:
         # Detect speaker
         speaker = last_speaker
         if any(phrase in lower for phrase in customer_cues):
-            speaker = "<b>Customer<b/>"
+            speaker = "<b>Customer</b>"
         elif any(phrase in lower for phrase in agent_cues):
-            speaker = "<b>Agent<b/>"
+            speaker = "<b>Agent</b>"
 
         last_speaker = speaker
 
