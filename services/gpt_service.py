@@ -70,41 +70,8 @@ def build_gpt_prompt(transcript: str, rule_list: list[str]) -> str:
     return prompt.strip()
 
 # <-------------- OpenAI setup start ----------->
+
 load_dotenv()
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
-    project=os.getenv("OPENAI_PROJECT_ID")
-)
-
-def evaluate_rules_with_gpt(sampleId: int,transcript: str, rules: List[str]) -> List[dict]:
-    prompt = build_gpt_prompt(transcript, rules)
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",  # or "gpt-4o" for better reasoning
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
-            max_tokens=1000
-        )
-
-        # Fix for new OpenAI SDK
-        result_text = response.choices[0].message.content.strip()
-
-        # Optional: Clean markdown wrappers if any
-        result_text = result_text.strip('`').strip()
-        try:
-            return json.loads(result_text)
-        except json.JSONDecodeError:
-            logger.warning("GPT returned invalid JSON", extra={"sampleId ": sampleId})    
-
-    except Exception as e:
-        return [{
-            "rule": rule,
-            "result": "Error",
-            "reason": str(e)
-        } for rule in rules]
-
-
 api_key = os.getenv("api_key")
 project_id = os.getenv("OPENAI_PROJECT_ID")
 
@@ -140,22 +107,56 @@ def evaluate_rules_with_gpt_using_requests(sampleId: int, transcript: str, rules
     except Exception as e:
         return [{"rule": rule, "result": "Error", "reason": f"Parsing error: {str(e)}"} for rule in rules]
 
+# load_dotenv()
+# client = OpenAI(
+#     api_key=os.getenv("OPENAI_API_KEY"),
+#     project=os.getenv("OPENAI_PROJECT_ID")
+# )
 
-def extract_audit_fields_from_text_using_openai(transcript: str) -> dict:
-    prompt = EXTRACTION_PROMPT_TEMPLATE + transcript + "\n\nReturn only valid JSON."
+# def evaluate_rules_with_gpt(sampleId: int,transcript: str, rules: List[str]) -> List[dict]:
+#     prompt = build_gpt_prompt(transcript, rules)
 
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.2,
-        max_tokens=500
-    )
+#     try:
+#         response = client.chat.completions.create(
+#             model="gpt-3.5-turbo",  # or "gpt-4o" for better reasoning
+#             messages=[{"role": "user", "content": prompt}],
+#             temperature=0.1,
+#             max_tokens=1000
+#         )
 
-    content = response.choices[0].message.content.strip()
-    try:
-        return json.loads(content)
-    except Exception:
-        return {"raw_output": content}
+#         # Fix for new OpenAI SDK
+#         result_text = response.choices[0].message.content.strip()
+
+#         # Optional: Clean markdown wrappers if any
+#         result_text = result_text.strip('`').strip()
+#         try:
+#             return json.loads(result_text)
+#         except json.JSONDecodeError:
+#             logger.warning("GPT returned invalid JSON", extra={"sampleId ": sampleId})    
+
+#     except Exception as e:
+#         return [{
+#             "rule": rule,
+#             "result": "Error",
+#             "reason": str(e)
+#         } for rule in rules]
+    
+
+# def extract_audit_fields_from_text_using_openai(transcript: str) -> dict:
+#     prompt = EXTRACTION_PROMPT_TEMPLATE + transcript + "\n\nReturn only valid JSON."
+
+#     response = client.chat.completions.create(
+#         model="gpt-4",
+#         messages=[{"role": "user", "content": prompt}],
+#         temperature=0.2,
+#         max_tokens=500
+#     )
+
+#     content = response.choices[0].message.content.strip()
+#     try:
+#         return json.loads(content)
+#     except Exception:
+#         return {"raw_output": content}
 
 # <-------------- OpenAI setup end ----------->
 

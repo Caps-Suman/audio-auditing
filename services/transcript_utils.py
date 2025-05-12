@@ -1,45 +1,48 @@
-import re
+from typing import List
+import datetime
 
-def format_transcript_with_speakers(transcript: str) -> str:
-    """
-    Attempt to label speakers based on common phrases for Agent and Customer.
-    """
+def seconds_to_timestamp(seconds: float) -> str:
+    """Convert float seconds to HH:MM:SS format."""
+    return str(datetime.timedelta(seconds=int(seconds)))
 
+def format_transcript_with_speakers(segments: List[dict]) -> str:
+    """
+    Format Whisper segments with speaker labels and start time.
+    Input: list of dicts like {'start': float, 'text': str}
+    Output: formatted transcript string
+    """
+    # Spanish + English cues to identify speakers
     agent_cues = [
-        "thank you for calling",
-        "how may i",
-        "can i have",
-        "let me",
-        "your order is",
-        "i can help",
-        "have a nice day",
+        "thank you for calling", "how may i", "can i have", "let me", "i can help", "your order is",
+        "this is", "have a nice day", "you're welcome", "we can process",
+        "bienvenido al centro", "le puedo ayudar", "dígame", "está necesitando", "le recuerdo"
     ]
 
     customer_cues = [
-        "i'd like",
-        "my name is",
-        "sure",
-        "yes",
-        "okay",
-        "that's fine",
-        "i want",
-        "i was thinking",
-        "thank you",
+        "my name is", "i'd like", "sure", "yes", "okay", "that's fine", "i want", "i need",
+        "thank you", "i called", "i'm calling", "i have a question",
+        "me llamo", "necesito", "mi abuela", "yo hablé", "fui a llevar",
+        "tengo el formulario", "lo fui a llevar"
     ]
 
-    # Split into sentences based on punctuation followed by a capital letter
-    sentences = re.split(r"(?<=[.?!])\s+(?=[A-Z])", transcript.strip())
-    formatted_lines = []
+    transcript_lines = []
+    last_speaker = "Agent"  # Default to Agent at the start
 
-    for sentence in sentences:
-        sentence_lower = sentence.lower()
-        speaker = "Agent"  # default
+    for seg in segments:
+        text = seg["text"].strip()
+        lower = text.lower()
+        start_time = seconds_to_timestamp(seg["start"])
 
-        if any(phrase in sentence_lower for phrase in customer_cues):
+        # Detect speaker
+        speaker = last_speaker
+        if any(phrase in lower for phrase in customer_cues):
             speaker = "Customer"
-        elif any(phrase in sentence_lower for phrase in agent_cues):
+        elif any(phrase in lower for phrase in agent_cues):
             speaker = "Agent"
 
-        formatted_lines.append(f"{speaker}: {sentence.strip()}")
+        last_speaker = speaker
 
-    return "\n".join(formatted_lines)
+        # Append formatted line
+        transcript_lines.append(f"[{start_time}] {speaker}: {text}")
+
+    return "\n".join(transcript_lines)

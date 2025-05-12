@@ -6,8 +6,8 @@ from fastapi import APIRouter, File, UploadFile, HTTPException, logger
 from fastapi.responses import JSONResponse
 
 from services.transcript_utils import format_transcript_with_speakers
-from services.whisper_service import transcribe_audio
-from services.gpt_service import evaluate_rules_with_gpt, evaluate_rules_with_gpt_using_requests
+from services.whisper_service import transcribe_audio, transcribe_audio_whisper
+from services.gpt_service import evaluate_rules_with_gpt_using_requests
 # from services.gpt_service import evaluate_rules_with_local_llm, extract_audit_fields_from_text_using_local_llm, extract_audit_fields_from_text_using_openai
 from services.audio_format_handler import transcode_to_whisper_wav
 
@@ -32,7 +32,7 @@ async def extract_from_audio(file: UploadFile = File(...)):
         transcoded_path = transcode_to_whisper_wav(audio_path)
 
         # Transcribe the clean .wav audio
-        transcript = transcribe_audio(transcoded_path)
+        transcript = transcribe_audio_whisper(transcoded_path)
 
         # Extract audit fields from transcript
         # audit_data = extract_audit_fields_from_text_using_local_llm(transcript)
@@ -64,7 +64,7 @@ class AuditRequest(BaseModel):
 
 @router.post("/analyze-audio")
 async def audit_call(request: AuditRequest):
-    print(f"Received request: {request}")
+    # print(f"Received request: {request}")
     audio_path = None
     transcoded_path = None
     webhook_url = os.getenv("WEBHOOK_URL")
@@ -88,7 +88,7 @@ async def audit_call(request: AuditRequest):
         transcoded_path = transcode_to_whisper_wav(audio_path)
 
         # Step 4: Transcribe
-        transcript = transcribe_audio(transcoded_path)
+        transcript = transcribe_audio_whisper(transcoded_path)
 
         # Step 5: Evaluate parameters
         evaluations = []
@@ -100,22 +100,24 @@ async def audit_call(request: AuditRequest):
                 "rules": result
             })
 
+        formatted_transcript = format_transcript_with_speakers(transcript)
+
         # Step 6: Send success webhook
         payload = {
             "sampleId": request.sampleId,
             "status": "completed",
-            "transcript": transcript,
+            "transcript": formatted_transcript,
             "evaluations": evaluations
         }
 
         try:
             response = requests.post(webhook_url, json=payload)
-            # print(f"[Webhook Success] Status: {response.status_code}, Response: {response.text}")
-            print(f"[Webhook Success] Status: {response.status_code}, Response: {response.text}, payload: {payload}")
+            print(f"[Webhook Success] Status: {response.status_code}, Response: {response.text}")
+            # print(f"[Webhook Success] Status: {response.status_code}, Response: {response.text}, payload: {payload}")
         except Exception as e:
             print(f"[Webhook Error on success] {str(e)}")
 
-        return {"message": "Audit completed and webhook sent"}
+        return {"message": "Audit completed and webhook sent", "payload": payload}
 
     except Exception as e:
         # Step 7: Send failure webhook
