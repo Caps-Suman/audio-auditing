@@ -36,13 +36,18 @@ def format_transcript_with_speakers(segments: List[dict]) -> str:
         # Detect speaker
         speaker = last_speaker
         if any(phrase in lower for phrase in customer_cues):
-            speaker = "User"
+            speaker = "Customer"
         elif any(phrase in lower for phrase in agent_cues):
-            speaker = "Assistant"
+            speaker = "Agent"
         last_speaker = speaker
 
         # Style per speaker
-        className = "assistantClass" if speaker == "Assistant" else "userClass"
+        # className = "assistantClass" if speaker == "Agent" else "userClass"
+        className = (
+                "assistantClass" if speaker == "Agent"
+                else "userClass" if speaker == "Customer"
+                else "unknownClass"
+            )
 
         # HTML block
         html = f"""
