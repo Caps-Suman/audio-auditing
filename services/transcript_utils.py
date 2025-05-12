@@ -36,13 +36,23 @@ def format_transcript_with_speakers(segments: List[dict]) -> str:
         # Detect speaker
         speaker = last_speaker
         if any(phrase in lower for phrase in customer_cues):
-            speaker = "<b>Customer</b>"
+            speaker = "User"
         elif any(phrase in lower for phrase in agent_cues):
-            speaker = "<b>Agent</b>"
-
+            speaker = "Assistant"
         last_speaker = speaker
 
-        # Append formatted line
-        transcript_lines.append(f"[{start_time}] {speaker}: {text}")
+        # Style per speaker
+        className = "assistantClass" if speaker == "Assistant" else "userClass"
 
-    return "<br/>".join(transcript_lines)
+        # HTML block
+        html = f"""
+        <div class="{className}">
+            <span class="timeClass">{start_time}</span>
+            <span class="speakerClass">{speaker}</span>
+            <span class="textClass">{text}</span>
+        </div>
+        """
+        clean_html = "".join(line.strip() for line in html.splitlines())
+        transcript_lines.append(clean_html)
+
+    return "".join(transcript_lines)
