@@ -46,7 +46,7 @@ load_dotenv()
 api_key = os.getenv("api_key")
 project_id = os.getenv("OPENAI_PROJECT_ID")
 
-def evaluate_rules_with_gpt_using_requests(sampleId: int, transcript: str, rules: List[str]) -> List[dict]:
+def evaluate_rules_with_gpt_using_requests(transcript: str, rules: List[str]) -> List[dict]:
     prompt = build_gpt_prompt(transcript, rules)
 
     payload = {

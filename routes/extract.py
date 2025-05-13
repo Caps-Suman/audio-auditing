@@ -15,7 +15,7 @@ class ParameterRule(BaseModel):
 
 class AuditRequest(BaseModel):
     audioUrl: str
-    sampleId: str
+    sampleId: Optional[str] = None
     parameter: List[ParameterRule]
 
 router = APIRouter()
@@ -52,7 +52,7 @@ async def audit_call(request: AuditRequest):
         # Step 5: Evaluate parameters
         evaluations = []
         for param in request.parameter:
-            result = evaluate_rules_with_gpt_using_requests(request.sampleId, transcript, param.ruleList)
+            result = evaluate_rules_with_gpt_using_requests(transcript, param.ruleList)
             evaluations.append({
                 "id": param.id,
                 "name": param.name,
@@ -71,14 +71,14 @@ async def audit_call(request: AuditRequest):
         }
 
         try:
-            # response = requests.post(webhook_url, json=payload)
+            response = requests.post(webhook_url, json=payload)
             print(f"[Webhook Success] Status: {response.status_code}, Response: {response.text}")
             # print(f"[Webhook Success] Status: {response.status_code}, Response: {response.text}, payload: {payload}")
         except Exception as e:
             print(f"[Webhook Error on success] {str(e)}")
 
-        return {"message": "Audit completed and webhook sent", "payload": payload}
-        # return {"message": "Audit completed and webhook sent"}
+        # return {"message": "Audit completed and webhook sent", "payload": payload}
+        return {"message": "Audit completed and webhook sent"}
 
     except Exception as e:
         # Step 7: Send failure webhook
@@ -89,7 +89,7 @@ async def audit_call(request: AuditRequest):
         }
 
         try:
-            # response = requests.post(webhook_url, json=error_payload)
+            response = requests.post(webhook_url, json=error_payload)
             print(f"[Webhook Error Notified] Status: {response.status_code}, Response: {response.text}")
         except Exception as inner:
             print(f"[Webhook Send Failed] {str(inner)}")
