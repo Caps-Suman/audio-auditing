@@ -8,7 +8,7 @@ def seconds_to_timestamp(seconds: float) -> str:
     """Convert float seconds to HH:MM:SS format."""
     return str(datetime.timedelta(seconds=int(seconds)))
 
-def format_transcript_plain_with_timestamp(segments: List[dict]) -> str:
+def format_transcript_without_speaker(segments: List[dict]) -> str:
     """
     Format Whisper segments as HTML with timestamp and text only.
     No speaker attribution, no role classification.
