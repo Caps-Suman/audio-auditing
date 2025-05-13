@@ -59,8 +59,8 @@ async def audit_call(request: AuditRequest):
                 "rules": result
             })
 
-        formatted_transcript = format_transcript_with_speakers(transcript)
-        # formatted_transcript = format_transcript_without_speaker(transcript)
+        # formatted_transcript = format_transcript_with_speakers(transcript)
+        formatted_transcript = format_transcript_without_speaker(transcript)
 
         # Step 6: Send success webhook
         payload = {

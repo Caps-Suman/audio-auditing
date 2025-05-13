@@ -26,7 +26,7 @@ def format_transcript_without_speaker(segments: List[dict]) -> str:
         html_block = f"""
         <div class="agentClass">
             <span class="timeClass">{start_time}</span>
-            <span class="textClass">{escaped_text}</span>
+            <span class="ms-1 textClass">{escaped_text}</span>
         </div>
         """
         clean_html = "".join(line.strip() for line in html_block.splitlines())
