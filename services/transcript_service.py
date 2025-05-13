@@ -8,6 +8,32 @@ def seconds_to_timestamp(seconds: float) -> str:
     """Convert float seconds to HH:MM:SS format."""
     return str(datetime.timedelta(seconds=int(seconds)))
 
+def format_transcript_plain_with_timestamp(segments: List[dict]) -> str:
+    """
+    Format Whisper segments as HTML with timestamp and text only.
+    No speaker attribution, no role classification.
+
+    Input: list of dicts like {'start': float, 'text': str}
+    Output: formatted transcript HTML string.
+    """
+    transcript_lines = []
+
+    for seg in segments:
+        text = seg["text"].strip()
+        start_time = seconds_to_timestamp(seg["start"])
+        escaped_text = html.escape(text)
+
+        html_block = f"""
+        <div class="agentClass">
+            <span class="timeClass">{start_time}</span>
+            <span class="textClass">{escaped_text}</span>
+        </div>
+        """
+        clean_html = "".join(line.strip() for line in html_block.splitlines())
+        transcript_lines.append(clean_html)
+
+    return "".join(transcript_lines)
+
 def format_transcript_with_speakers(segments: List[dict]) -> str:
     """
     Format Whisper segments with speaker labels and start time.

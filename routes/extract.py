@@ -3,7 +3,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 import requests
 from fastapi import APIRouter, HTTPException
-from services.transcript_service import format_transcript_with_speakers
+from services.transcript_service import format_transcript_plain_with_timestamp, format_transcript_with_speakers
 from services.whisper_service import transcribe_audio_whisper
 from services.openai_service import evaluate_rules_with_gpt_using_requests
 from services.audio_format_handler import transcode_to_whisper_wav
@@ -60,6 +60,7 @@ async def audit_call(request: AuditRequest):
             })
 
         formatted_transcript = format_transcript_with_speakers(transcript)
+        # formatted_transcript = format_transcript_plain_with_timestamp(transcript)
 
         # Step 6: Send success webhook
         payload = {
