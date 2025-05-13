@@ -2,6 +2,8 @@ import html
 from typing import List
 import datetime
 
+from services.openai_service import format_transcript_html_with_gpt_using_requests
+
 def seconds_to_timestamp(seconds: float) -> str:
     """Convert float seconds to HH:MM:SS format."""
     return str(datetime.timedelta(seconds=int(seconds)))
@@ -28,7 +30,6 @@ def format_transcript_with_speakers(segments: List[dict]) -> str:
         "i was wondering", "i was in the hospital", "my number is", "i take", "my doctor said",
         "my birth date is", "i need help", "i have bills", "can i", "do you offer", "my address is"
     ]
-
 
     transcript_lines = []
 
@@ -67,3 +68,5 @@ def format_transcript_with_speakers(segments: List[dict]) -> str:
         transcript_lines.append(clean_html)
 
     return "".join(transcript_lines)
+    # html_result = format_transcript_html_with_gpt_using_requests(segments)
+    # return html_result

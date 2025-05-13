@@ -16,10 +16,6 @@ def transcribe_audio_whisper(audio_path: str) -> List[Dict]:
     """
     result = model.transcribe(audio_path, verbose=False)
 
-    # Get and log detected language
-    # detected_language = result.get("language", "unknown")
-    # print(f"[Whisper] Detected language: {detected_language}")
-
     # Extract and format segments
     segments = result.get("segments", [])
     return [
