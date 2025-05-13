@@ -2,13 +2,12 @@ import os, tempfile, shutil
 from typing import List, Optional
 from pydantic import BaseModel
 import requests
-from fastapi import APIRouter, File, UploadFile, HTTPException, logger
-from fastapi.responses import JSONResponse
-
-from services.transcript_utils import format_transcript_with_speakers
+from fastapi import APIRouter, HTTPException
+from services.transcript_service import format_transcript_with_speakers
 from services.whisper_service import transcribe_audio_whisper
 from services.openai_service import evaluate_rules_with_gpt_using_requests
 from services.audio_format_handler import transcode_to_whisper_wav
+
 class ParameterRule(BaseModel):
     id: str
     name: Optional[str] = None
