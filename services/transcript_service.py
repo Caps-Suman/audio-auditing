@@ -9,31 +9,15 @@ def seconds_to_timestamp(seconds: float) -> str:
     """Convert float seconds to HH:MM:SS format."""
     return str(datetime.timedelta(seconds=int(seconds)))
 
-def remove_timestamps_from_text(transcript: str) -> str:
+def remove_timestamps_from_transcript(text: str) -> str:
     """
-    Removes timestamps (e.g., 0:00:00, 12:34, etc.) from the beginning of each line.
-
-    Args:
-        transcript (str): Raw transcript text with timestamps.
-
-    Returns:
-        str: Transcript with timestamps removed.
+    Removes all timestamps (e.g., 0:00:00, 12:34) from the transcript string,
+    even when glued to words. Also normalizes extra whitespace.
     """
-    cleaned_lines = []
-    for line in transcript.splitlines():
-        # Remove timestamp patterns from start of line (HH:MM:SS or MM:SS)
-        cleaned_line = re.sub(r'^\s*(\d{1,2}:)?\d{1,2}:\d{2}\s*', '', line)
-        if cleaned_line.strip():
-            cleaned_lines.append(cleaned_line)
-    return '\n'.join(cleaned_lines)
-
-def smart_format_transcript(transcript):
-    if isinstance(transcript, str):
-        return format_transcript_without_speaker_new(transcript)  # regex-based for raw string
-    elif isinstance(transcript, list):
-        return format_transcript_without_speaker(transcript)  # Whisper segment list
-    else:
-        raise ValueError("Unsupported transcript format")
+    timestamp_pattern = r'(?:\d{1,2}:)?\d{1,2}:\d{2}'
+    cleaned = re.sub(timestamp_pattern, '', text)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned
 
 
 def format_transcript_without_speaker(segments: List[dict]) -> str:
@@ -61,33 +45,6 @@ def format_transcript_without_speaker(segments: List[dict]) -> str:
         transcript_lines.append(clean_html)
 
     return "".join(transcript_lines)
-
-import re
-import html
-
-def format_transcript_without_speaker_new(transcript: str) -> str:
-    """
-    Takes raw string with embedded timestamps, splits it,
-    and returns formatted HTML without speaker attribution.
-    """
-    transcript_lines = []
-
-    # Split on timestamps like 0:00:00, 10:05, etc.
-    segments = re.findall(r'((?:\d{1,2}:)?\d{1,2}:\d{2})\s*([^0-9]+)', transcript)
-
-    for timestamp, text in segments:
-        escaped_text = html.escape(text.strip())
-        html_block = f"""
-        <div class="agentClass">
-            <span class="timeClass">{timestamp}</span>
-            <span class="ms-1 textClass">{escaped_text}</span>
-        </div>
-        """
-        clean_html = "".join(line.strip() for line in html_block.splitlines())
-        transcript_lines.append(clean_html)
-
-    return "".join(transcript_lines)
-
 
 def format_transcript_with_speakers(segments: List[dict]) -> str:
     """

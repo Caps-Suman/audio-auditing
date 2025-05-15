@@ -7,7 +7,7 @@ from pydantic import BaseModel
 import requests
 from fastapi import APIRouter, HTTPException
 from sympy import content
-from services.transcript_service import format_transcript_without_speaker, format_transcript_with_speakers, format_transcript_without_speaker_new, remove_timestamps_from_text, smart_format_transcript
+from services.transcript_service import format_transcript_without_speaker, remove_timestamps_from_transcript
 from services.whisper_service import transcribe_audio_whisper
 from services.openai_service import evaluate_rules_with_gpt_using_requests
 from services.audio_format_handler import transcode_to_whisper_wav
@@ -93,14 +93,8 @@ async def audit_call(request: AuditRequest):
             "status": "error",
             "error": str(e)
         }
-
-        try:
-            response = requests.post(webhook_url, json=error_payload)
-            print(f"[Webhook Error Notified] Status: {response.status_code}, Response: {response.text}")
-        except Exception as inner:
-            print(f"[Webhook Send Failed] {str(inner)}")
-
-        raise HTTPException(status_code=500, detail=f"Audit failed: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=error_payload)
 
     finally:
         for path in [audio_path, transcoded_path]:
@@ -119,8 +113,8 @@ async def audit_call(request: AuditRequest):
     audio_path = None
     transcoded_path = None
 
-    if not testing_webhook_url:
-        raise HTTPException(status_code=500, detail="Webhook URL not configured.")
+    # if not testing_webhook_url:
+    #     raise HTTPException(status_code=500, detail="Webhook URL not configured.")
 
     try:
         transcript = request.transcription
@@ -142,7 +136,7 @@ async def audit_call(request: AuditRequest):
             # Step 4: Transcribe
             transcript = transcribe_audio_whisper(transcoded_path)
         else:
-            transcript = remove_timestamps_from_text(transcript)
+            transcript = remove_timestamps_from_transcript(transcript)
 
         # Step 5: Evaluate parameters
         evaluations = []
@@ -154,14 +148,12 @@ async def audit_call(request: AuditRequest):
                 "rules": result
             })
         
-        formatted_transcript = smart_format_transcript(transcript)
-
         # Step 6: Send success webhook
         payload = {
             "audioFileId": request.audioFileId,
             "userUuid": request.userUuid,
             "status": "completed",
-            "transcript": formatted_transcript,
+            "transcript": format_transcript_without_speaker(transcript) if not request.transcription else None,
             "evaluations": evaluations
         }
         return JSONResponse(content=jsonable_encoder(payload))
@@ -175,13 +167,7 @@ async def audit_call(request: AuditRequest):
             "error": str(e)
         }
         traceback.print_exc() 
-
-        try:
-            return JSONResponse(content=error_payload, status_code=500)
-        except Exception as inner:
-            print(f"[Webhook Send Failed] {str(inner)}")
-
-        raise HTTPException(status_code=500, detail=f"Audit failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=error_payload)
 
     finally:
         for path in [audio_path, transcoded_path]:
