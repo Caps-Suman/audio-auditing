@@ -1,29 +1,14 @@
 import os, tempfile, shutil
 import traceback
-from typing import List, Optional, Union
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 import requests
 from fastapi import APIRouter, HTTPException
-from sympy import content
+from models.audit_models import AuditRequest, RuleItem, SingleRuleRequest, SingleRuleResponse
 from services.transcript_service import format_transcript_without_speaker, remove_timestamps_from_transcript
 from services.whisper_service import transcribe_audio_whisper
 from services.openai_service import evaluate_rules_with_gpt_using_requests
 from services.audio_format_handler import transcode_to_whisper_wav
-
-class ParameterRule(BaseModel):
-    id: Union[int, str]
-    name: Optional[str] = None
-    ruleList: List[str]
-
-class AuditRequest(BaseModel):
-    audioUrl: str
-    transcription: Optional[str] = None
-    sampleId: Optional[str] = None
-    audioFileId: Optional[str] = None
-    userUuid: Optional[str] = None
-    parameter: List[ParameterRule]
 
 router = APIRouter()
 webhook_url = os.getenv("WEBHOOK_URL")
@@ -141,13 +126,32 @@ async def audit_call(request: AuditRequest):
         # Step 5: Evaluate parameters
         evaluations = []
         for param in request.parameter:
-            result = evaluate_rules_with_gpt_using_requests(transcript, param.ruleList)
+            rules_result = []
+
+            # Step 1: Get list of rule strings for GPT input
+            rule_texts = [r.rule if isinstance(r, RuleItem) else r for r in param.ruleList]
+
+            # Step 2: Get GPT evaluation result
+            gpt_results = evaluate_rules_with_gpt_using_requests(request.transcription, rule_texts)
+
+            # Step 3: Merge ruleId + GPT output
+            for i, gpt_result in enumerate(gpt_results):
+                rule_obj = param.ruleList[i]
+                ruleId = rule_obj.ruleId if isinstance(rule_obj, RuleItem) else None
+
+                rules_result.append({
+                    "ruleId": ruleId,
+                    "rule": gpt_result.get("rule"),
+                    "result": gpt_result.get("result"),
+                    "reason": gpt_result.get("reason")
+                })
+
             evaluations.append({
                 "id": param.id,
                 "name": param.name,
-                "rules": result
+                "rules": rules_result
             })
-        
+
         # Step 6: Send success webhook
         payload = {
             "audioFileId": request.audioFileId,
@@ -176,3 +180,27 @@ async def audit_call(request: AuditRequest):
                     os.remove(path)
             except Exception as e:
                 print(f"Failed to remove temp file {path}: {e}")
+
+
+
+@router.post("/analyze-single-rule", response_model=SingleRuleResponse)
+async def analyze_single_rule(request: SingleRuleRequest):
+    try:
+        result_list = evaluate_rules_with_gpt_using_requests(
+            request.transcript, [request.rule]
+        )
+
+        if not result_list or not isinstance(result_list, list):
+            raise ValueError("Invalid AI response")
+
+        result = result_list[0]  # Only one rule was sent
+
+        return SingleRuleResponse(
+            ruleId=request.ruleId,
+            rule=request.rule,
+            result=result.get("result", "Error"),
+            reason=result.get("reason", "Could not evaluate")
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing rule: {str(e)}")
