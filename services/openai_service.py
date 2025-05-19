@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 import os, json
 from dotenv import load_dotenv
 from fastapi import logger
@@ -6,9 +6,11 @@ from openai import OpenAI
 import requests
 
 def build_gpt_prompt(transcript: str, rule_list: list[str]) -> str:
-    # formatted_rules = "\n".join([f"{i+1}. {rule}" for i, rule in enumerate(rule_list)])
-    cleaned_rules = [rule.replace('\n', ' ') for rule in rule_list]
-    formatted_rules = "\n".join([f"{i+1}. {rule}" for i, rule in enumerate(cleaned_rules)])
+    # print("Input rules to GPT:", rule_list)
+    formatted_rules = "\n".join([
+        f"{i+1}. [ID: {r['ruleId']}] {r['rule']}"
+        for i, r in enumerate(rule_list)
+    ])
 
     prompt = f"""
                 You are a quality audit evaluation engine.
@@ -17,6 +19,7 @@ def build_gpt_prompt(transcript: str, rule_list: list[str]) -> str:
 
                 Instructions:
                 - For each rule, return:
+                - "ruleId": the rule's unique ID
                 - "rule": the exact rule text (must match input exactly)
                 - "result": "Yes" if the rule was followed, "No" if not, "Unknown" if not verifiable
                 - "reason": briefly justify the answer (1-2 sentences max)
@@ -33,6 +36,7 @@ def build_gpt_prompt(transcript: str, rule_list: list[str]) -> str:
                 Return format (strict JSON):
                 [
                 {{
+                    "ruleId": "ruleId",
                     "rule": "...",
                     "result": "Yes" | "No" | "Unknown",
                     "reason": "..."
@@ -42,7 +46,7 @@ def build_gpt_prompt(transcript: str, rule_list: list[str]) -> str:
                 """
     return prompt.strip()
 
-# <-------------- OpenAI setup using API ----------->
+# <-------------- OpenAI setup, without confidence score start ----------->
 
 load_dotenv()
 api_key = os.getenv("api_key")
@@ -79,7 +83,105 @@ def evaluate_rules_with_gpt_using_requests(transcript: str, rules: List[str]) ->
         return json.loads(content)
     except Exception as e:
         return [{"rule": rule, "result": "Error", "reason": f"Parsing error: {str(e)}"} for rule in rules]
+# <-------------- OpenAI setup, without confidence score end ----------->
 
+
+# <-------------- OpenAI setup, response with confidence score start ----------->
+def build_gpt_prompt_with_confidence(transcript: str, rule_list: List[Dict[str, str]]) -> str:
+    formatted_rules = "\n".join([
+        f"{i+1}. [ID: {r['ruleId']}] {r['rule']}"
+        for i, r in enumerate(rule_list)
+    ])
+
+    prompt = f"""
+        You are a quality audit evaluation engine.
+
+        Your task is to analyze a call transcript and determine whether each of the provided rules is satisfied based on what was said in the call.
+
+        Instructions:
+        - For each rule, return:
+        - "ruleId": the unique ID of the rule
+        - "rule": the full rule text
+        - "result": one of "Yes", "No", or "Unknown"
+        - "reason": a brief explanation of your decision (1-2 sentences)
+        - "confidenceScore": a float between 0.0 and 1.0 indicating how confident you are in the result
+
+        You must not assume or hallucinate. Use only the information found in the transcript.
+
+        Rules:
+        {formatted_rules}
+
+        Transcript:
+        \"\"\"{transcript}\"\"\"
+
+        Return format (strict JSON):
+        [
+        {{
+            "ruleId": "...",
+            "rule": "...",
+            "result": "Yes" | "No" | "Unknown",
+            "reason": "...",
+            "confidenceScore": 0.0 - 1.0
+        }},
+        ...
+        ]
+        """
+    return prompt.strip()
+
+def evaluate_rules_with_gpt_using_requests_with_confidence(transcript: str, rule_list: List[Dict[str, str]]) -> List[dict]:
+    prompt = build_gpt_prompt_with_confidence(transcript, rule_list)
+
+    payload = {
+        "model": "gpt-3.5-turbo",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.2,
+        "max_tokens": 1500
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+
+    if project_id:
+        headers["OpenAI-Project"] = project_id
+
+    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+
+    if response.status_code != 200:
+        print("API Error:", response.status_code, response.text)
+        return [{
+            "ruleId": rule["ruleId"],
+            "rule": rule["rule"],
+            "result": "Error",
+            "reason": response.text,
+            "confidenceScore": 0.0
+        } for rule in rule_list]
+
+    try:
+        content = response.json()["choices"][0]["message"]["content"]
+        parsed = json.loads(content)
+
+        # Validate and normalize confidenceScore
+        for item in parsed:
+            try:
+                score = float(item.get("confidenceScore", 0.5))
+                item["confidenceScore"] = max(0.0, min(score, 1.0))
+            except Exception:
+                item["confidenceScore"] = 0.5  # fallback if malformed
+
+        return parsed
+
+    except Exception as e:
+        return [{
+            "ruleId": rule["ruleId"],
+            "rule": rule["rule"],
+            "result": "Error",
+            "reason": f"Parsing error: {str(e)}",
+            "confidenceScore": 0.0
+        } for rule in rule_list]
+
+# <-------------- OpenAI setup, with confidence score end ----------->
 
 # <--------------- Diarization and HTML formatting using openai API---------------->
 def format_transcript_html_with_gpt_using_requests(segments: List[dict]) -> str:

@@ -7,7 +7,7 @@ from dtos.audit_models import AuditRequest, RuleItem, SingleRuleRequest, SingleR
 from fastapi import APIRouter, HTTPException
 from services.transcript_service import format_transcript_without_speaker, remove_timestamps_from_transcript
 from services.whisper_service import transcribe_audio_whisper
-from services.openai_service import evaluate_rules_with_gpt_using_requests
+from services.openai_service import evaluate_rules_with_gpt_using_requests, evaluate_rules_with_gpt_using_requests_with_confidence
 from services.audio_format_handler import transcode_to_whisper_wav
 
 router = APIRouter()
@@ -43,7 +43,17 @@ async def audit_call(request: AuditRequest):
         # Step 5: Evaluate parameters
         evaluations = []
         for param in request.parameter:
-            result = evaluate_rules_with_gpt_using_requests(transcript, param.ruleList)
+            # result = evaluate_rules_with_gpt_using_requests(transcript, param.ruleList)
+            rule_list = [
+                {
+                    "ruleId": r.ruleId,
+                    "rule": r.rule.replace("\n", " ")
+                }
+                for r in param.ruleList
+            ]
+            # result = evaluate_rules_with_gpt_using_requests(transcript, rule_list)
+            result = evaluate_rules_with_gpt_using_requests_with_confidence(transcript, rule_list)
+
             evaluations.append({
                 "id": param.id,
                 "name": param.name,
@@ -129,10 +139,18 @@ async def audit_call(request: AuditRequest):
             rules_result = []
 
             # Step 1: Get list of rule strings for GPT input
-            rule_texts = [r.rule if isinstance(r, RuleItem) else r for r in param.ruleList]
+            rule_texts = [
+                {
+                    "ruleId": r.ruleId,
+                    "rule": r.rule.replace("\n", " ")
+                }
+                for r in param.ruleList
+            ]
 
             # Step 2: Get GPT evaluation result
-            gpt_results = evaluate_rules_with_gpt_using_requests(request.transcription, rule_texts)
+            # gpt_results = evaluate_rules_with_gpt_using_requests(request.transcription, rule_texts)
+            gpt_results = evaluate_rules_with_gpt_using_requests_with_confidence(request.transcription, rule_texts)
+            # print("output rules of GPT:", gpt_results)
 
             # Step 3: Merge ruleId + GPT output
             for i, gpt_result in enumerate(gpt_results):
@@ -143,7 +161,8 @@ async def audit_call(request: AuditRequest):
                     "ruleId": ruleId,
                     "rule": gpt_result.get("rule"),
                     "result": gpt_result.get("result"),
-                    "reason": gpt_result.get("reason")
+                    "reason": gpt_result.get("reason"),
+                    "confidenceScore": gpt_result.get("confidenceScore", 0.0)
                 })
 
             evaluations.append({
@@ -185,12 +204,11 @@ async def audit_call(request: AuditRequest):
                 print(f"Failed to remove temp file {path}: {e}")
 
 
-
 @router.post("/analyze-single-rule", response_model=SingleRuleResponse)
 async def analyze_single_rule(request: SingleRuleRequest):
     try:
         # print(f"Received request: {request}")
-        result_list = evaluate_rules_with_gpt_using_requests(
+        result_list = evaluate_rules_with_gpt_using_requests_with_confidence(
             request.transcript, [request.rule]
         )
 
@@ -204,7 +222,8 @@ async def analyze_single_rule(request: SingleRuleRequest):
             ruleId=request.ruleId,
             rule=request.rule,
             result=result.get("result", "Error"),
-            reason=result.get("reason", "Could not evaluate")
+            reason=result.get("reason", "Could not evaluate"),
+            confidenceScore=result.get("confidenceScore", 0.0)
         )
 
     except Exception as e:

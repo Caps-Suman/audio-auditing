@@ -30,3 +30,4 @@ class SingleRuleResponse(BaseModel):
     rule: str
     result: str
     reason: str
+    confidenceScore: float = 0.0
