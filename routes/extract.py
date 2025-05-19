@@ -208,8 +208,12 @@ async def audit_call(request: AuditRequest):
 async def analyze_single_rule(request: SingleRuleRequest):
     try:
         # print(f"Received request: {request}")
+        rule_list = [{
+            "ruleId": str(request.ruleId),
+            "rule": request.rule.replace("\n", " ")
+        }]
         result_list = evaluate_rules_with_gpt_using_requests_with_confidence(
-            request.transcript, [request.rule]
+            request.transcript, rule_list
         )
 
         if not result_list or not isinstance(result_list, list):

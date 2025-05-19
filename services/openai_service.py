@@ -12,6 +12,7 @@ def build_gpt_prompt(transcript: str, rule_list: list[str]) -> str:
         for i, r in enumerate(rule_list)
     ])
 
+    # - IMPORTANT: If a rule explicitly says to default to "Yes" or "No" in case of **missing information**, you must follow that instruction.
     prompt = f"""
                 You are a quality audit evaluation engine.
 
@@ -60,7 +61,7 @@ def evaluate_rules_with_gpt_using_requests(transcript: str, rules: List[str]) ->
         "messages": [
             {"role": "user", "content": prompt}
         ],
-        "max_tokens": 1000,
+        "max_tokens": 1500,
         "temperature": 0.1
     }
 
@@ -105,8 +106,7 @@ def build_gpt_prompt_with_confidence(transcript: str, rule_list: List[Dict[str, 
         - "result": one of "Yes", "No", or "Unknown"
         - "reason": a brief explanation of your decision (1-2 sentences)
         - "confidenceScore": a float between 0.0 and 1.0 indicating how confident you are in the result
-
-        You must not assume or hallucinate. Use only the information found in the transcript.
+        - Use only the information found in the transcript. Do not hallucinate or make assumptions.
 
         Rules:
         {formatted_rules}
@@ -134,7 +134,7 @@ def evaluate_rules_with_gpt_using_requests_with_confidence(transcript: str, rule
     payload = {
         "model": "gpt-3.5-turbo",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.2,
+        "temperature": 0.1,
         "max_tokens": 1500
     }
 

@@ -21,12 +21,12 @@ class AuditRequest(BaseModel):
 
 
 class SingleRuleRequest(BaseModel):
-    ruleId: int
+    ruleId: Union[int, str]
     rule: str
     transcript: str
 
 class SingleRuleResponse(BaseModel):
-    ruleId: int
+    ruleId: Union[int, str]
     rule: str
     result: str
     reason: str
