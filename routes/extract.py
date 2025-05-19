@@ -3,8 +3,8 @@ import traceback
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 import requests
+from dtos.audit_models import AuditRequest, RuleItem, SingleRuleRequest, SingleRuleResponse
 from fastapi import APIRouter, HTTPException
-from models.audit_models import AuditRequest, RuleItem, SingleRuleRequest, SingleRuleResponse
 from services.transcript_service import format_transcript_without_speaker, remove_timestamps_from_transcript
 from services.whisper_service import transcribe_audio_whisper
 from services.openai_service import evaluate_rules_with_gpt_using_requests
