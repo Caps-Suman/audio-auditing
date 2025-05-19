@@ -6,7 +6,9 @@ from openai import OpenAI
 import requests
 
 def build_gpt_prompt(transcript: str, rule_list: list[str]) -> str:
-    formatted_rules = "\n".join([f"{i+1}. {rule}" for i, rule in enumerate(rule_list)])
+    # formatted_rules = "\n".join([f"{i+1}. {rule}" for i, rule in enumerate(rule_list)])
+    cleaned_rules = [rule.replace('\n', ' ') for rule in rule_list]
+    formatted_rules = "\n".join([f"{i+1}. {rule}" for i, rule in enumerate(cleaned_rules)])
 
     prompt = f"""
                 You are a quality audit evaluation engine.
@@ -15,7 +17,7 @@ def build_gpt_prompt(transcript: str, rule_list: list[str]) -> str:
 
                 Instructions:
                 - For each rule, return:
-                - "rule": the rule text
+                - "rule": the exact rule text (must match input exactly)
                 - "result": "Yes" if the rule was followed, "No" if not, "Unknown" if not verifiable
                 - "reason": briefly justify the answer (1-2 sentences max)
                 - Use ONLY the information found in the transcript.

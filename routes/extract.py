@@ -160,6 +160,9 @@ async def audit_call(request: AuditRequest):
             "transcript": format_transcript_without_speaker(transcript) if not request.transcription else None,
             "evaluations": evaluations
         }
+
+        # print(f"Payload: {payload}")
+
         return JSONResponse(content=jsonable_encoder(payload))
 
     except Exception as e:
@@ -186,6 +189,7 @@ async def audit_call(request: AuditRequest):
 @router.post("/analyze-single-rule", response_model=SingleRuleResponse)
 async def analyze_single_rule(request: SingleRuleRequest):
     try:
+        # print(f"Received request: {request}")
         result_list = evaluate_rules_with_gpt_using_requests(
             request.transcript, [request.rule]
         )
@@ -195,6 +199,7 @@ async def analyze_single_rule(request: SingleRuleRequest):
 
         result = result_list[0]  # Only one rule was sent
 
+        # print(f"Result: {result}")
         return SingleRuleResponse(
             ruleId=request.ruleId,
             rule=request.rule,
