@@ -180,8 +180,6 @@ async def audit_call(request: AuditRequest):
             "evaluations": evaluations
         }
 
-        # print(f"Payload: {payload}")
-
         return JSONResponse(content=jsonable_encoder(payload))
 
     except Exception as e:
