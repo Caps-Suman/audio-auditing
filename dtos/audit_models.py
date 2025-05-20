@@ -2,7 +2,7 @@ from typing import List, Union, Optional
 from pydantic import BaseModel
 
 class RuleItem(BaseModel):
-    ruleId: Union[int, str]
+    ruleId: Optional[Union[int, str]] = None
     rule: str
 
 RuleListType = Union[List[str], List[RuleItem]]
