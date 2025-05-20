@@ -14,7 +14,7 @@ def transcribe_audio_whisper(audio_path: str) -> List[Dict]:
     Returns a list of segments with 'start' (in seconds) and 'text' (transcribed phrase).
     Logs only the language code.
     """
-    result = model.transcribe(audio_path, verbose=False)
+    result = model.transcribe(audio_path, language="en", verbose=False)
 
     # Extract and format segments
     segments = result.get("segments", [])
