@@ -43,16 +43,18 @@ async def audit_call(request: AuditRequest):
         # Step 5: Evaluate parameters
         evaluations = []
         for param in request.parameter:
-            # result = evaluate_rules_with_gpt_using_requests(transcript, param.ruleList)
             rule_list = [
                 {
                     "ruleId": r.ruleId,
-                    "rule": r.rule.replace("\n", " ")
+                    "rule": r.rule.strip()
                 }
                 for r in param.ruleList
             ]
+            rule_map = {r["ruleId"]: r["rule"] for r in rule_list}
             # result = evaluate_rules_with_gpt_using_requests(transcript, rule_list)
             result = evaluate_rules_with_gpt_using_requests_with_confidence(transcript, rule_list)
+            for r in result:
+                r["rule"] = rule_map.get(r["ruleId"], "[Rule Missing]")
 
             evaluations.append({
                 "id": param.id,
@@ -142,24 +144,24 @@ async def audit_call(request: AuditRequest):
             rule_texts = [
                 {
                     "ruleId": r.ruleId,
-                    "rule": r.rule.replace("\n", " ")
+                    "rule": r.rule.strip()
                 }
                 for r in param.ruleList
             ]
 
             # Step 2: Get GPT evaluation result
             # gpt_results = evaluate_rules_with_gpt_using_requests(request.transcription, rule_texts)
-            gpt_results = evaluate_rules_with_gpt_using_requests_with_confidence(request.transcription, rule_texts)
-            # print("output rules of GPT:", gpt_results)
+            gpt_results = evaluate_rules_with_gpt_using_requests_with_confidence(transcript, rule_texts)
 
             # Step 3: Merge ruleId + GPT output
             for i, gpt_result in enumerate(gpt_results):
                 rule_obj = param.ruleList[i]
                 ruleId = rule_obj.ruleId if isinstance(rule_obj, RuleItem) else None
+                rule = rule_obj.rule.strip()
 
                 rules_result.append({
                     "ruleId": ruleId,
-                    "rule": gpt_result.get("rule"),
+                    "rule": rule,
                     "result": gpt_result.get("result"),
                     "reason": gpt_result.get("reason"),
                     "confidenceScore": gpt_result.get("confidenceScore", 0.0)
@@ -179,6 +181,8 @@ async def audit_call(request: AuditRequest):
             "transcript": format_transcript_without_speaker(transcript) if not request.transcription else None,
             "evaluations": evaluations
         }
+
+        # print(f"Payload: {payload}")
 
         return JSONResponse(content=jsonable_encoder(payload))
 

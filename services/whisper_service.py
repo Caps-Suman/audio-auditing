@@ -13,6 +13,8 @@ def transcribe_audio_whisper(audio_path: str) -> List[Dict]:
     Transcribes audio using OpenAI Whisper with automatic language detection.
     Returns a list of segments with 'start' (in seconds) and 'text' (transcribed phrase).
     Logs only the language code.
+    Spanish : language="es"
+    English : language="en"
     """
     result = model.transcribe(audio_path, language="en", verbose=False)
 

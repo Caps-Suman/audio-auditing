@@ -20,10 +20,9 @@ def build_gpt_prompt(transcript: str, rule_list: list[str]) -> str:
 
                 Instructions:
                 - For each rule, return:
-                - "ruleId": the rule's unique ID
-                - "rule": the exact rule text (must match input exactly)
-                - "result": "Yes" if the rule was followed, "No" if not, "Unknown" if not verifiable
-                - "reason": briefly justify the answer (1-2 sentences max)
+                    - "ruleId": the rule's unique ID
+                    - "result": "Yes" if the rule was followed, "No" if not, "Unknown" if not verifiable
+                    - "reason": briefly justify the answer (1-2 sentences max)
                 - Use ONLY the information found in the transcript.
                 - Do NOT assume or hallucinate anything.
                 - Return only a valid JSON array (no markdown, no commentary).
@@ -101,11 +100,10 @@ def build_gpt_prompt_with_confidence(transcript: str, rule_list: List[Dict[str, 
 
         Instructions:
         - For each rule, return:
-        - "ruleId": the unique ID of the rule
-        - "rule": the full rule text
-        - "result": one of "Yes", "No", or "Unknown"
-        - "reason": a brief explanation of your decision (1-2 sentences)
-        - "confidenceScore": a float between 0.0 and 1.0 indicating how confident you are in the result
+            - "ruleId": the unique ID of the rule
+            - "result": one of "Yes", "No", or "Unknown"
+            - "reason": a brief explanation of your decision (1-2 sentences)
+            - "confidenceScore": a float between 0.0 and 1.0 indicating how confident you are in the result
         - Use only the information found in the transcript. Do not hallucinate or make assumptions.
 
         Rules:
