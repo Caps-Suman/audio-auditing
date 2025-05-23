@@ -45,7 +45,7 @@ def transcribe_audio_whisper(audio_path: str) -> List[Dict]:
     """
     try:
         model = WhisperModelPool.get_model()
-        result = model.transcribe(audio_path, language="es", verbose=False)
+        result = model.transcribe(audio_path, language="en", verbose=False)
 
         segments = result.get("segments", [])
         return [
