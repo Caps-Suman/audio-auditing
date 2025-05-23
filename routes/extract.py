@@ -1,3 +1,4 @@
+import gc
 import os, tempfile, shutil
 import traceback
 from fastapi.encoders import jsonable_encoder
@@ -183,7 +184,7 @@ async def audit_call(request: AuditRequest):
         }
 
         # print(f"Payload: {payload}")
-
+        gc.collect()
         return JSONResponse(content=jsonable_encoder(payload))
 
     except Exception as e:
@@ -192,7 +193,7 @@ async def audit_call(request: AuditRequest):
             "audioFileId": request.audioFileId,
             "userUuid": request.userUuid,
             "status": "error",
-            "error": str(e)
+            # "error": str(e)
         }
         traceback.print_exc() 
         raise HTTPException(status_code=500, detail=error_payload)
@@ -224,6 +225,7 @@ async def analyze_single_rule(request: SingleRuleRequest):
         result = result_list[0]  # Only one rule was sent
 
         # print(f"Result: {result}")
+        gc.collect()
         return SingleRuleResponse(
             ruleId=request.ruleId,
             rule=request.rule,
