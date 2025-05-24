@@ -21,7 +21,7 @@ requests
 # if you want to use huggingface or pyannote diarization
 # pyannote-audio
 
-llama-cpp-python
+# llama-cpp-python
 
 yt-dlp
 # yt-dlp -x --audio-format mp3 https://youtu.be/hpZFJctBUHQ
