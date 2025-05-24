@@ -55,3 +55,41 @@ def transcribe_audio_whisper(audio_path: str) -> List[Dict]:
     except Exception as e:
         print(f"[Whisper Error] {e}")
         return []
+    
+
+import os
+
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+USE_FASTER = os.getenv("USE_FASTER_WHISPER", "true").lower() == "true"
+
+def transcribe_audio_hybrid_whisper(audio_path: str) -> List[Dict]:
+    """
+    Transcribes audio using either OpenAI Whisper or faster-whisper.
+    Returns list of dicts with segment-level timestamps.
+    """
+    try:
+        if USE_FASTER:
+            print("[Whisper] Using faster-whisper for transcription")
+            try:
+                from faster_whisper import WhisperModel as FastWhisperModel
+                model = FastWhisperModel("base", device="cuda" if torch.cuda.is_available() else "cpu", compute_type="int8")
+                segments, _ = model.transcribe(audio_path)
+                return [{"start": seg.start, "text": seg.text.strip()} for seg in segments]
+            except ImportError:
+                print("[Whisper Warning] faster-whisper not installed, falling back to OpenAI Whisper")
+            except Exception as fe:
+                print(f"[Whisper Faster Error] {fe}, falling back to OpenAI Whisper")
+
+        else:
+            print("[Whisper] Using openai-whisper for transcription")
+            model = WhisperModelPool.get_model()
+            result = model.transcribe(audio_path, language="en", verbose=False)
+            segments = result.get("segments", [])
+            return [
+                {"start": seg["start"], "text": seg["text"].strip()}
+                for seg in segments
+            ]
+
+    except Exception as e:
+        print(f"[Whisper Error] {e}")
+        return []

@@ -316,7 +316,7 @@ async def evaluate_rules_with_gpt_using_sdk_with_confidence_async(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.1,
-            max_tokens=1500
+            max_tokens=2000
         )
 
         content = response.choices[0].message.content
