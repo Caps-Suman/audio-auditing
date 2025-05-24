@@ -1,5 +1,6 @@
 # === Core Framework ===
 fastapi
+gunicorn
 uvicorn
 
 # === OpenAI SDK ===
