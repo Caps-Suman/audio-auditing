@@ -1,8 +1,9 @@
+import asyncio
 from typing import Dict, List
 import os, json
 from dotenv import load_dotenv
 from fastapi import logger
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 import requests
 
 def build_gpt_prompt(transcript: str, rule_list: list[str]) -> str:
@@ -253,7 +254,7 @@ def format_transcript_html_with_gpt_using_requests(segments: List[dict]) -> str:
         return f"<!-- Parsing error: {str(e)} -->"
 
 
-# <-------------- OpenAI setup using SDK ----------->
+# <-------------- OpenAI setup using SDK (Sync) ----------->
 client = OpenAI(
     api_key=os.getenv("api_key"),
     project=os.getenv("OPENAI_PROJECT_ID")
@@ -295,5 +296,96 @@ def evaluate_rules_with_gpt_using_sdk_with_confidence(transcript: str, rule_list
             "confidenceScore": 0.0
         } for rule in rule_list]
 
-# <-------------- OpenAI setup end ----------->
+# <-------------- OpenAI setup end (Sync) ----------->
 
+
+# <-------------- OpenAI setup using SDK (Async) ---------->
+async_client = AsyncOpenAI(
+    api_key=os.getenv("api_key"),
+    project=os.getenv("OPENAI_PROJECT_ID")
+)
+
+async def evaluate_rules_with_gpt_using_sdk_with_confidence_async(
+    transcript: str,
+    rule_list: List[Dict[str, str]]
+) -> List[dict]:
+    prompt = build_gpt_prompt_with_confidence(transcript, rule_list)
+
+    try:
+        response = await async_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+            max_tokens=1500
+        )
+
+        content = response.choices[0].message.content
+        parsed = json.loads(content)
+
+        # Normalize confidenceScore
+        for item in parsed:
+            try:
+                score = float(item.get("confidenceScore", 0.5))
+                item["confidenceScore"] = max(0.0, min(score, 1.0))
+            except Exception:
+                item["confidenceScore"] = 0.5
+
+        return parsed
+
+    except Exception as e:
+        print("LLM Async Error:", e)
+        return [{
+            "ruleId": rule["ruleId"],
+            "rule": rule["rule"],
+            "result": "Error",
+            "reason": f"Exception: {str(e)}",
+            "confidenceScore": 0.0
+        } for rule in rule_list]
+    
+
+async def evaluate_param_with_rules(transcript: str, param) -> Dict:
+    rule_list = [{"ruleId": r.ruleId, "rule": r.rule.strip()} for r in param.ruleList]
+    rule_map = {r["ruleId"]: r["rule"] for r in rule_list}
+    prompt = build_gpt_prompt_with_confidence(transcript, rule_list)
+
+    try:
+        response = await async_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+            max_tokens=2000
+        )
+
+        content = response.choices[0].message.content
+        parsed = json.loads(content)
+
+        for item in parsed:
+            try:
+                score = float(item.get("confidenceScore", 0.5))
+                item["confidenceScore"] = max(0.0, min(score, 1.0))
+            except Exception:
+                item["confidenceScore"] = 0.5
+
+            item["rule"] = rule_map.get(item["ruleId"], "[Rule Missing]")
+
+        return {"id": param.id, "name": param.name, "rules": parsed}
+
+    except Exception as e:
+        print(f"GPT error for param {param.name}: {e}")
+        return {
+            "id": param.id,
+            "name": param.name,
+            "rules": [{
+                "ruleId": r["ruleId"],
+                "rule": r["rule"],
+                "result": "Error",
+                "reason": str(e),
+                "confidenceScore": 0.0
+            } for r in rule_list]
+        }
+
+async def evaluate_all_parameters_async(transcript: str, parameters: List) -> List[Dict]:
+    tasks = [evaluate_param_with_rules(transcript, param) for param in parameters]
+    return await asyncio.gather(*tasks)
+    
+# <-------------- OpenAI setup using SDK (Async) end ----------->

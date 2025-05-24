@@ -1,3 +1,4 @@
+import asyncio
 import gc
 import os, tempfile, shutil
 import traceback
@@ -8,7 +9,7 @@ from dtos.audit_models import AuditRequest, RuleItem, SingleRuleRequest, SingleR
 from fastapi import APIRouter, HTTPException
 from services.transcript_service import format_transcript_without_speaker, remove_timestamps_from_transcript
 from services.whisper_service import transcribe_audio_whisper
-from services.openai_service import evaluate_rules_with_gpt_using_requests, evaluate_rules_with_gpt_using_requests_with_confidence, evaluate_rules_with_gpt_using_sdk_with_confidence
+from services.openai_service import evaluate_param_with_rules, evaluate_rules_with_gpt_using_requests, evaluate_rules_with_gpt_using_requests_with_confidence, evaluate_rules_with_gpt_using_sdk_with_confidence
 from services.audio_format_handler import transcode_to_whisper_wav
 
 router = APIRouter()
@@ -42,27 +43,10 @@ async def audit_call(request: AuditRequest):
         transcript = transcribe_audio_whisper(transcoded_path)
 
         # Step 5: Evaluate parameters
-        evaluations = []
-        for param in request.parameter:
-            rule_list = [
-                {
-                    "ruleId": r.ruleId,
-                    "rule": r.rule.strip()
-                }
-                for r in param.ruleList
-            ]
-            
-            rule_map = {r["ruleId"]: r["rule"] for r in rule_list}
-            result = evaluate_rules_with_gpt_using_sdk_with_confidence(transcript, rule_list)
-            
-            for r in result:
-                r["rule"] = rule_map.get(r["ruleId"], "[Rule Missing]")
-
-            evaluations.append({
-                "id": param.id,
-                "name": param.name,
-                "rules": result
-            })
+        evaluations = await asyncio.gather(*[
+            evaluate_param_with_rules(transcript, param)
+            for param in request.parameter
+        ])
 
         # formatted_transcript = format_transcript_with_speakers(transcript)
         formatted_transcript = format_transcript_without_speaker(transcript)
@@ -137,42 +121,11 @@ async def audit_call(request: AuditRequest):
         else:
             transcript = remove_timestamps_from_transcript(transcript)
 
-        # Step 5: Evaluate parameters
-        evaluations = []
-        for param in request.parameter:
-            rules_result = []
-
-            # Step 1: Get list of rule strings for GPT input
-            rule_texts = [
-                {
-                    "ruleId": r.ruleId,
-                    "rule": r.rule.strip()
-                }
-                for r in param.ruleList
-            ]
-
-            # Step 2: Get GPT evaluation result
-            gpt_results = evaluate_rules_with_gpt_using_sdk_with_confidence(transcript, rule_texts)
-
-            # Step 3: Merge ruleId + GPT output
-            for i, gpt_result in enumerate(gpt_results):
-                rule_obj = param.ruleList[i]
-                ruleId = rule_obj.ruleId if isinstance(rule_obj, RuleItem) else None
-                rule = rule_obj.rule.strip()
-
-                rules_result.append({
-                    "ruleId": ruleId,
-                    "rule": rule,
-                    "result": gpt_result.get("result"),
-                    "reason": gpt_result.get("reason"),
-                    "confidenceScore": gpt_result.get("confidenceScore", 0.0)
-                })
-
-            evaluations.append({
-                "id": param.id,
-                "name": param.name,
-                "rules": rules_result
-            })
+        # Step 2: Evaluate all parameters in parallel using OpenAI GPT
+        evaluations = await asyncio.gather(*[
+            evaluate_param_with_rules(transcript, param)
+            for param in request.parameter
+        ])
         
         # Step 6: Send success webhook
         payload = {
