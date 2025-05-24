@@ -255,37 +255,45 @@ def format_transcript_html_with_gpt_using_requests(segments: List[dict]) -> str:
 
 # <-------------- OpenAI setup using SDK ----------->
 client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
+    api_key=os.getenv("api_key"),
     project=os.getenv("OPENAI_PROJECT_ID")
 )
-
-def evaluate_rules_with_gpt(sampleId: int,transcript: str, rules: List[str]) -> List[dict]:
-    prompt = build_gpt_prompt(transcript, rules)
+    
+def evaluate_rules_with_gpt_using_sdk_with_confidence(transcript: str, rule_list: List[Dict[str, str]]) -> List[dict]:
+    prompt = build_gpt_prompt_with_confidence(transcript, rule_list)
 
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",  # or "gpt-4o" for better reasoning
-            messages=[{"role": "user", "content": prompt}],
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
             temperature=0.1,
-            max_tokens=1000
+            max_tokens=2000
         )
 
-        # Fix for new OpenAI SDK
-        result_text = response.choices[0].message.content.strip()
+        content = response.choices[0].message.content
+        parsed = json.loads(content)
 
-        # Optional: Clean markdown wrappers if any
-        result_text = result_text.strip('`').strip()
-        try:
-            return json.loads(result_text)
-        except json.JSONDecodeError:
-            logger.warning("GPT returned invalid JSON", extra={"sampleId ": sampleId})    
+        # Normalize confidenceScore
+        for item in parsed:
+            try:
+                score = float(item.get("confidenceScore", 0.5))
+                item["confidenceScore"] = max(0.0, min(score, 1.0))
+            except Exception:
+                item["confidenceScore"] = 0.5  # Fallback
+
+        return parsed
 
     except Exception as e:
+        print("LLM Evaluation Error:", e)
         return [{
-            "rule": rule,
+            "ruleId": rule["ruleId"],
+            "rule": rule["rule"],
             "result": "Error",
-            "reason": str(e)
-        } for rule in rules]
+            "reason": f"Exception: {str(e)}",
+            "confidenceScore": 0.0
+        } for rule in rule_list]
 
 # <-------------- OpenAI setup end ----------->
 

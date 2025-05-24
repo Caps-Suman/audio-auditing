@@ -8,7 +8,7 @@ from dtos.audit_models import AuditRequest, RuleItem, SingleRuleRequest, SingleR
 from fastapi import APIRouter, HTTPException
 from services.transcript_service import format_transcript_without_speaker, remove_timestamps_from_transcript
 from services.whisper_service import transcribe_audio_whisper
-from services.openai_service import evaluate_rules_with_gpt_using_requests, evaluate_rules_with_gpt_using_requests_with_confidence
+from services.openai_service import evaluate_rules_with_gpt_using_requests, evaluate_rules_with_gpt_using_requests_with_confidence, evaluate_rules_with_gpt_using_sdk_with_confidence
 from services.audio_format_handler import transcode_to_whisper_wav
 
 router = APIRouter()
@@ -51,9 +51,10 @@ async def audit_call(request: AuditRequest):
                 }
                 for r in param.ruleList
             ]
+            
             rule_map = {r["ruleId"]: r["rule"] for r in rule_list}
-            # result = evaluate_rules_with_gpt_using_requests(transcript, rule_list)
-            result = evaluate_rules_with_gpt_using_requests_with_confidence(transcript, rule_list)
+            result = evaluate_rules_with_gpt_using_sdk_with_confidence(transcript, rule_list)
+            
             for r in result:
                 r["rule"] = rule_map.get(r["ruleId"], "[Rule Missing]")
 
@@ -151,8 +152,7 @@ async def audit_call(request: AuditRequest):
             ]
 
             # Step 2: Get GPT evaluation result
-            # gpt_results = evaluate_rules_with_gpt_using_requests(request.transcription, rule_texts)
-            gpt_results = evaluate_rules_with_gpt_using_requests_with_confidence(transcript, rule_texts)
+            gpt_results = evaluate_rules_with_gpt_using_sdk_with_confidence(transcript, rule_texts)
 
             # Step 3: Merge ruleId + GPT output
             for i, gpt_result in enumerate(gpt_results):
@@ -215,7 +215,8 @@ async def analyze_single_rule(request: SingleRuleRequest):
             "ruleId": str(request.ruleId),
             "rule": request.rule.replace("\n", " ")
         }]
-        result_list = evaluate_rules_with_gpt_using_requests_with_confidence(
+
+        result_list = evaluate_rules_with_gpt_using_sdk_with_confidence(
             request.transcript, rule_list
         )
 
