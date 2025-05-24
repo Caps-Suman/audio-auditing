@@ -20,3 +20,12 @@ Accept repostory access (Provide a name, website link and task type).
 Then in your project virtual env (venv) terminal run : huggingface-cli login
 Provide token and then proceed.
 <!----------------------------- ########################## ------------------------------->
+
+# General Pipeline Summary
+Client → POST /analyze-audio
+         └─> Audio Download
+             └─> Transcode (FFmpeg)
+                 └─> Transcribe (Whisper)
+                     └─> Rule Evaluation (OpenAI/Local LLM)
+                         └─> HTML Transcript Generation
+                             └─> Webhook POST with audit result
