@@ -12,7 +12,7 @@ pip install --upgrade pip
 
 # Step 3: Install dependencies
 echo "📦 Installing dependencies..."
-pip install -r requirements.txt
+pip install -r requirement.txt
 
 # Step 4: Ensure ffmpeg is installed
 if ! command -v ffmpeg &> /dev/null
