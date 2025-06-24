@@ -92,7 +92,7 @@ testing_webhook_url = os.getenv("TESTING_WEBHOOK_URL")
 
 @router.post("/analyze-audio-testing")
 async def audit_call(request: AuditRequest):
-    # print(f"Received request: {request}")
+    print(f"Received request: {request}")
     audio_path = None
     transcoded_path = None
 
@@ -157,7 +157,9 @@ async def audit_call(request: AuditRequest):
                 if path and os.path.exists(path):
                     os.remove(path)
             except Exception as e:
-                print(f"Failed to remove temp file {path}: {e}")
+                traceback.print_exc() 
+                raise HTTPException(status_code=500, detail=e)
+                # print(f"Failed to remove temp file {path}: {e}")
 
 
 @router.post("/analyze-single-rule", response_model=SingleRuleResponse)
