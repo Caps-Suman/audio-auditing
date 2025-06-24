@@ -7,7 +7,7 @@ class RuleItem(BaseModel):
 
 RuleListType = Union[List[str], List[RuleItem]]
 class ParameterRule(BaseModel):
-    id: Union[int, str]
+    id: Optional[Union[int, str]] = None
     name: Optional[str] = None
     ruleList: RuleListType
 
